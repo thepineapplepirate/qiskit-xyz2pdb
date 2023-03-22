@@ -7,8 +7,9 @@ __authors__ = ("Bryan Raubenolt (raubenb@ccf.org)",
                "Fabio Cumbo (cumbof@ccf.org)",
                "Jayadev Joshi (joshij@ccf.org)",
                "Daniel Blankenberg (blanked2@ccf.org)")
+
 __version__ = "0.1.0"
-__date__ = "Feb 25, 2023"
+__date__ = "Mar 22, 2023"
 
 import argparse as ap
 import errno
@@ -16,29 +17,31 @@ import os
 from functools import partial
 from typing import List
 
+TOOL_ID = "qiskit-xyz2pdb"
+
 # Residue names
 # Used in case of --alpha-c-traces only
 RESIDUES = {
-    "A":"ALA",
-    "R":"ARG",
-    "N":"ASN",
-    "D":"ASP",
-    "C":"CYS",
-    "E":"GLU",
-    "Q":"GLN",
-    "G":"GLY",
-    "H":"HIS",
-    "I":"ILE",
-    "L":"LEU",
-    "K":"LYS",
-    "M":"MET",
-    "F":"PHE",
-    "P":"PRO",
-    "S":"SER",
-    "T":"THR",
-    "W":"TRP",
-    "Y":"TYR",
-    "V":"VAL"
+    "A": "ALA",
+    "R": "ARG",
+    "N": "ASN",
+    "D": "ASP",
+    "C": "CYS",
+    "E": "GLU",
+    "Q": "GLN",
+    "G": "GLY",
+    "H": "HIS",
+    "I": "ILE",
+    "L": "LEU",
+    "K": "LYS",
+    "M": "MET",
+    "F": "PHE",
+    "P": "PRO",
+    "S": "SER",
+    "T": "THR",
+    "W": "TRP",
+    "Y": "TYR",
+    "V": "VAL"
 }
 
 
@@ -50,7 +53,7 @@ def read_params():
     """
 
     p = ap.ArgumentParser(
-        prog="xyz2pdb",
+        prog=TOOL_ID,
         description="Convert a XYZ file from Qiskit output into a PDB file",
         formatter_class=ap.ArgumentDefaultsHelpFormatter,
     )
@@ -86,8 +89,8 @@ def read_params():
         "-v",
         "--version",
         action="version",
-        version="xyz2pdb version {} ({})".format(__version__, __date__),
-        help="Print the current xyz2pdb version and exit",
+        version="{} version {} ({})".format(TOOL_ID, __version__, __date__),
+        help="Print the {} version and exit".format(TOOL_ID),
     )
     return p.parse_args()
 
