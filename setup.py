@@ -40,11 +40,11 @@ setuptools.setup(
     name=TOOL_ID,
     packages=setuptools.find_packages(),
     project_urls={
-        "Issues": "https://github.com/cumbof/qiskit-xyz2pdb/issues",
-        "Source": "https://github.com/cumbof/qiskit-xyz2pdb",
+        "Issues": "https://github.com/thepineapplepirate/qiskit-xyz2pdb/issues",
+        "Source": "https://github.com/thepineapplepirate/qiskit-xyz2pdb",
     },
     python_requires=">=3.6",
-    url="http://github.com/cumbof/qiskit-xyz2pdb",
+    url="http://github.com/thepineapplepirate/qiskit-xyz2pdb",
     version=__version__,
     zip_safe=False,
 )
