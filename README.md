@@ -19,11 +19,11 @@ $ conda install qiskit-xyz2pdb
 The hetero atom format is most useful for quick visualization, using a program such as NGL viewer. Note: this option assumes that the XYZ coordinates are all consecutively bound forming a continous single chain; it assumes that there are no side chains, and the CONECT records reflect this. How to run with this option:
 
 ```
-$ xyz2pdb --in-xyz inputfile.xyz --out-pdb outputfile.pdb --hetero-atoms
+$ qiskit-xyz2pdb --in-xyz inputfile.xyz --out-pdb outputfile.pdb --hetero-atoms
 ```
 
 The conventional alpha carbon trace format is more versatile and can be used for further research beyond visualization - such as reconstructing the full backbone and sidechains, adding a force field, and then performing molecular dynamics simulations. How to run with this option:
 
 ```
-$ xyz2pdb --in-xyz inputfile.xyz --out-pdb outputfile.pdb --alpha-c-traces
+$ qiskit-xyz2pdb --in-xyz inputfile.xyz --out-pdb outputfile.pdb --alpha-c-traces
 ```
