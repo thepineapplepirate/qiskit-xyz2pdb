@@ -8,7 +8,7 @@ __authors__ = ("Bryan Raubenolt (raubenb@ccf.org)",
                "Jayadev Joshi (joshij@ccf.org)",
                "Daniel Blankenberg (blanked2@ccf.org)")
 
-__version__ = "0.1.1"
+__version__ = "0.1.2"
 __date__ = "Jun 22, 2023"
 
 import argparse as ap
@@ -16,6 +16,8 @@ import errno
 import os
 from functools import partial
 from typing import List, Union
+
+import numpy as np
 
 TOOL_ID = "qiskit-xyz2pdb"
 
@@ -173,25 +175,26 @@ def format_line(
     )
 
 
-def load_xyz_data(xyz_filepath: os.path.abspath) -> List[List[Union[str, int, float]]]:
+def load_xyz_data(xyz_filepath: os.path.abspath) -> np.ndarray:
     """
     Load a XYZ file as defined by qiskit
 
     :param xyz_filepath:    Path to the XYZ file
-    :return:                A list of lists with the content of the XYZ file
+    :return:                A list of lists as numpy.ndarray with the content of the XYZ file
     """
 
     if not os.path.isfile(xyz_filepath):
         raise FileNotFoundError(errno.ENOENT, os.strerror(errno.ENOENT), xyz_filepath)
 
-    return [line.strip().split(" ") for line in open(xyz_filepath).readlines() if line.strip() and len(line.strip().split(" ")) == 4]
+    return np.array([line.strip().split(" ") for line in open(xyz_filepath).readlines() if line.strip() and len(line.strip().split(" ")) == 4])
 
 
 def build_pdb(
-    xyz_list: List[List[Union[str, int, float]]],
+    xyz_list: Union[List[List[Union[str, int, float]]], np.ndarray],
     out_pdb: os.path.abspath,
     alpha_c_trace: bool=False,
-    hetero_atoms: bool=False
+    hetero_atoms: bool=False,
+    overwrite: bool=False
 ) -> None:
     """
     Convert an XYZ list to a PDB file
@@ -200,12 +203,16 @@ def build_pdb(
     :param out_pdb:         Path to the output PDB file
     :param alpha_c_trace:   Add C(alpha) traces
     :param hetero_atoms:    Add hetero atoms
+    :param overwrite:       Overwrite the output file if it exists
     """
 
-    if not xyz_list:
-        raise ValueError("The XYZ list is empty!")
+    if isinstance(xyz_list, np.ndarray):
+        xyz_list = xyz_list.tolist()
 
-    if os.path.isfile(out_pdb):
+    if not xyz_list:
+        raise ValueError("The input XYZ is empty!")
+
+    if os.path.isfile(out_pdb) and not overwrite:
         raise Exception("The output PDB file already exists")
 
     if (alpha_c_trace and hetero_atoms) or (not alpha_c_trace and not hetero_atoms):
