@@ -8,14 +8,14 @@ __authors__ = ("Bryan Raubenolt (raubenb@ccf.org)",
                "Jayadev Joshi (joshij@ccf.org)",
                "Daniel Blankenberg (blanked2@ccf.org)")
 
-__version__ = "0.1.0"
-__date__ = "Mar 22, 2023"
+__version__ = "0.1.1"
+__date__ = "Jun 22, 2023"
 
 import argparse as ap
 import errno
 import os
 from functools import partial
-from typing import List
+from typing import List, Union
 
 TOOL_ID = "qiskit-xyz2pdb"
 
@@ -173,29 +173,48 @@ def format_line(
     )
 
 
-def main() -> None:
-    args = read_params()
+def load_xyz_data(xyz_filepath: os.path.abspath) -> List[List[Union[str, int, float]]]:
+    """
+    Load a XYZ file as defined by qiskit
 
-    if not os.path.isfile(args.in_xyz):
-        raise FileNotFoundError(errno.ENOENT, os.strerror(errno.ENOENT), args.in_xyz)
+    :param xyz_filepath:    Path to the XYZ file
+    :return:                A list of lists with the content of the XYZ file
+    """
 
-    if os.path.isfile(args.out_pdb):
+    if not os.path.isfile(xyz_filepath):
+        raise FileNotFoundError(errno.ENOENT, os.strerror(errno.ENOENT), xyz_filepath)
+
+    return [line.strip().split(" ") for line in open(xyz_filepath).readlines() if line.strip() and len(line.strip().split(" ")) == 4]
+
+
+def build_pdb(
+    xyz_list: List[List[Union[str, int, float]]],
+    out_pdb: os.path.abspath,
+    alpha_c_trace: bool=False,
+    hetero_atoms: bool=False
+) -> None:
+    """
+    Convert an XYZ list to a PDB file
+
+    :param xyz_list:        List of lists with the content of the XYZ file (see load_xyz_data)
+    :param out_pdb:         Path to the output PDB file
+    :param alpha_c_trace:   Add C(alpha) traces
+    :param hetero_atoms:    Add hetero atoms
+    """
+
+    if not xyz_list:
+        raise ValueError("The XYZ list is empty!")
+
+    if os.path.isfile(out_pdb):
         raise Exception("The output PDB file already exists")
 
-    if (args.alpha_c_trace and args.hetero_atoms) or (not args.alpha_c_trace and not args.hetero_atoms):
+    if (alpha_c_trace and hetero_atoms) or (not alpha_c_trace and not hetero_atoms):
         raise Exception(
             ("Please use one of the following flags: [--alpha-c-traces; --hetero-atoms]\n"
              "Use --help for additional details")
         )
 
-    with open(args.out_pdb, "w+") as outfile, open(args.in_xyz) as xyzfile:
-        try:
-            # Read the first line
-            in_file_num_res = int(next(xyzfile).strip())
-
-        except ValueError as ex:
-            raise ValueError("The first line of your input file must contain the number of residues").with_traceback(ex.__traceback__)
-        
+    with open(out_pdb, "w+") as outfile:
         # Standard headers for the PDB file
         # https://www.wwpdb.org/documentation/file-format-content/format33/sect2.html#COMPND
         outfile.write(
@@ -217,12 +236,9 @@ def main() -> None:
         # Count the number of residues
         num_res = 1
         
-        for line in xyzfile:
-            line = line.strip()
-            if line:
-                line_split = line.split(" ")
-
-                if len(line_split) != 4 or (len(line_split) == 4 and not contains_coordinates(line_split[1:])):
+        for xyz_line in xyz_list:
+            if xyz_line:
+                if len(xyz_line) != 4 or (len(xyz_line) == 4 and not contains_coordinates(xyz_line[1:])):
                     # Raise an exception in case the input line does not contain 4 columns
                     # or in case of invalid coordinates
                     raise Exception("Malformed input XYZ file")
@@ -234,34 +250,34 @@ def main() -> None:
                     chain_identifier="",
                     residue_sequence_number=num_res,
                     code_for_insertion_of_residues="",
-                    orthogonal_coordinates_for_x=float(line_split[1]),
-                    orthogonal_coordinates_for_y=float(line_split[2]),
-                    orthogonal_coordinates_for_z=float(line_split[3]),
+                    orthogonal_coordinates_for_x=float(xyz_line[1]),
+                    orthogonal_coordinates_for_y=float(xyz_line[2]),
+                    orthogonal_coordinates_for_z=float(xyz_line[3]),
                     occupancy=1.0,
                     temperature_factor=0.0,
-                    element_symbol=line_split[0],
+                    element_symbol=xyz_line[0],
                     charge_on_the_atom=""
                 )
 
-                if args.alpha_c_trace:
+                if alpha_c_trace:
                     # https://www.wwpdb.org/documentation/file-format-content/format33/sect9.html#ATOM
                     outfile.write(
                         "{}\n".format(
                             format_line_partial(
                                 record_name="ATOM",
                                 atom_name="CA",
-                                residue_name=RESIDUES[line_split[0]]
+                                residue_name=RESIDUES[xyz_line[0]]
                             )
                         )
                     )
                 
-                elif args.hetero_atoms:
+                elif hetero_atoms:
                     # https://www.wwpdb.org/documentation/file-format-content/format33/sect9.html#HETATM
                     outfile.write(
                         "{}\n".format(
                             format_line_partial(
                                 record_name="HETATM",
-                                atom_name=line_split[0],
+                                atom_name=xyz_line[0],
                                 residue_name="PEP"
                             )
                         )
@@ -269,7 +285,7 @@ def main() -> None:
 
                 num_res += 1
 
-        if args.hetero_atoms:
+        if hetero_atoms:
             # Add CONECT lines
             # https://www.wwpdb.org/documentation/file-format-content/format33/sect10.html#CONECT
             for i in range(1, num_res - 1):
@@ -306,13 +322,15 @@ def main() -> None:
 
         outfile.write("END")
 
-        if in_file_num_res != (num_res - 1):
-            # Check whether the number of residues in the first line of the XYZ file
-            # matches with the actual number of data lines in the same input file
-            raise Exception(
-                ("The output file has been produced but the number of residues in the first line of your input file "
-                 "does not match with the actual number of residues defined in {}".format(args.in_xyz))
-            )
+
+def main() -> None:
+    args = read_params()
+
+    # Load the XYZ file into a list of lists
+    xyz_list = load_xyz_data(args.in_xyz)
+
+    # Convert the XYZ list to PDB
+    build_pdb(xyz_list, args.out_pdb, alpha_c_trace=args.alpha_c_trace, hetero_atoms=args.hetero_atoms)
 
 
 if __name__ == "__main__":
