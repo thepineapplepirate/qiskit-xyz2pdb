@@ -15,7 +15,7 @@ import argparse as ap
 import errno
 import os
 from functools import partial
-from typing import List, Union
+from typing import List, Union, Optional
 
 import numpy as np
 
@@ -222,7 +222,7 @@ def build_pdb(
         raise ValueError("The input XYZ is empty!")
 
     if not out_pdb_name:
-        out_pdb_name = "{}.pdb".join([str(values[0]) for values in xyz_list])
+        out_pdb_name = "".join([str(values[0]) for values in xyz_list])
 
     if not out_pdb_folder:
         out_pdb_folder = os.getcwd()
