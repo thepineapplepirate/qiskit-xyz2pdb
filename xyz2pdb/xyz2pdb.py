@@ -9,7 +9,7 @@ __authors__ = ("Bryan Raubenolt (raubenb@ccf.org)",
                "Daniel Blankenberg (blanked2@ccf.org)")
 
 __version__ = "0.1.2"
-__date__ = "Jun 22, 2023"
+__date__ = "Jun 23, 2023"
 
 import argparse as ap
 import errno
@@ -67,11 +67,16 @@ def read_params():
         help="Path to the XYZ input file from Qiskit output",
     )
     p.add_argument(
-        "--out-pdb",
+        "--out-name",
+        type=str,
+        dest="out_name",
+        help="Name of the output PDB file",
+    )
+    p.add_argument(
+        "--out-folder",
         type=os.path.abspath,
-        required=True,
-        dest="out_pdb",
-        help="Path to the output PDB file",
+        dest="out_folder",
+        help="Path to the output folder",
     )
     p.add_argument(
         "--alpha-c-traces",
@@ -191,19 +196,23 @@ def load_xyz_data(xyz_filepath: os.path.abspath) -> np.ndarray:
 
 def build_pdb(
     xyz_list: Union[List[List[Union[str, int, float]]], np.ndarray],
-    out_pdb: os.path.abspath,
+    out_pdb_name: Optional[str]=None,
+    out_pdb_folder: Optional[os.path.abspath]=None,
     alpha_c_trace: bool=False,
     hetero_atoms: bool=False,
-    overwrite: bool=False
+    replace: bool=False
 ) -> None:
     """
-    Convert an XYZ list to a PDB file
+    Convert an XYZ list to a PDB file.
+    The output PDB file name is optional. In case of None, it is automatically defined based on the series on aminoacids in xyz_list.
+    The output folder path is also optional. In case of None, the output file is saved into the current working directory.
 
     :param xyz_list:        List of lists with the content of the XYZ file (see load_xyz_data)
-    :param out_pdb:         Path to the output PDB file
+    :param out_pdb_name:    Name of the output PDB file. Optional
+    :param out_pdb_folder:  Path to the folder of the output PDB file. Optional
     :param alpha_c_trace:   Add C(alpha) traces
     :param hetero_atoms:    Add hetero atoms
-    :param overwrite:       Overwrite the output file if it exists
+    :param replace:         Overwrite the output file if it exists
     """
 
     if isinstance(xyz_list, np.ndarray):
@@ -212,7 +221,15 @@ def build_pdb(
     if not xyz_list:
         raise ValueError("The input XYZ is empty!")
 
-    if os.path.isfile(out_pdb) and not overwrite:
+    if not out_pdb_name:
+        out_pdb_name = "{}.pdb".join([str(values[0]) for values in xyz_list])
+
+    if not out_pdb_folder:
+        out_pdb_folder = os.getcwd()
+
+    out_pdb = os.path.join(out_pdb_folder, "{}.pdb".format(out_pdb_name))
+
+    if os.path.isfile(out_pdb) and not replace:
         raise Exception("The output PDB file already exists")
 
     if (alpha_c_trace and hetero_atoms) or (not alpha_c_trace and not hetero_atoms):
@@ -337,7 +354,13 @@ def main() -> None:
     xyz_list = load_xyz_data(args.in_xyz)
 
     # Convert the XYZ list to PDB
-    build_pdb(xyz_list, args.out_pdb, alpha_c_trace=args.alpha_c_trace, hetero_atoms=args.hetero_atoms)
+    build_pdb(
+        xyz_list,
+        out_pdb_name=args.out_name,
+        out_pdb_folder=args.out_folder,
+        alpha_c_trace=args.alpha_c_trace,
+        hetero_atoms=args.hetero_atoms
+    )
 
 
 if __name__ == "__main__":
